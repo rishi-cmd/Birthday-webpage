@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hey Anushka! 🙂</title>
+<style>
+  body {
+    background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    text-align: center;
+    padding: 50px;
+    color: #fff;
+    overflow: hidden;
+  }
+  h1 { font-size: 2.8em; margin-bottom: 20px; }
+  input, textarea, button {
+    padding: 12px;
+    font-size: 1em;
+    border-radius: 10px;
+    border: none;
+    margin: 10px 5px;
+    text-align: center;
+  }
+  textarea { width: 80%; height: 80px; resize: none; }
+  button {
+    background-color: #ff4081; color: #fff; cursor: pointer;
+    transition: transform 0.3s ease, background 0.3s ease;
+  }
+  button:hover { transform: scale(1.1); background: #e91e63; }
+  .message { font-size: 1.4em; margin-top: 30px; display: none; }
+  .countdown { font-size: 1.2em; margin-top: 15px; font-weight: bold; color: #ffeb3b; }
+  .float-smile{
+    position:fixed; font-size:24px; pointer-events:none; animation: floatUp 6s linear forwards;
+  }
+  @keyframes floatUp { 0%{transform:translateY(100vh);} 100%{transform:translateY(-10vh);} }
+  #popup{
+    display:none;
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg,#ff9a9e,#fad0c4);
+    color: #170b1a;
+    padding: 30px 25px;
+    border-radius: 20px;
+    font-size: 1.3em;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+    z-index: 1000;
+    transition: transform 0.6s ease, opacity 0.6s ease;
+  }
+  #popup button{
+    margin-top: 15px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border:none;
+    font-weight: bold;
+    background:#ff4081; color:white;
+    cursor:pointer;
+    font-size:1em;
+    transition: transform 0.3s ease;
+  }
+  #popup button:hover{ transform: scale(1.1);}
+</style>
+</head>
+<body>
+
+<h1>Hey Anushka! 🙂</h1>
+
+<!-- Step 0: Ask about music -->
+<div id="step0">
+  <p>Do you want to hear some music while we chat? 🎵</p>
+  <button onclick="startMusic(true)">Yes 🎶</button>
+  <button onclick="startMusic(false)">No 🙂</button>
+</div>
+
+<div id="step-container" style="display:none;">
+
+  <!-- Step 1: Intro message before questions -->
+  <div id="step1">
+    <p>Before we start our conversation, may I know some personal information about you? 🌸</p>
+    <button onclick="nextStep(1)">Sure 🙂</button>
+  </div>
+
+  <!-- Step 2: Birthday Day -->
+  <div id="step2" style="display:none;">
+    <p>What day of the month were you born? 🎂</p>
+    <input type="number" id="day" placeholder="Day (DD)" min="1" max="31">
+    <br>
+    <button onclick="skipQuestion(2)">Skip</button>
+    <button onclick="nextStep(2)">Next</button>
+  </div>
+
+  <!-- Step 3: Birthday Month -->
+  <div id="step3" style="display:none;">
+    <p>Which month were you born in? 🌸</p>
+    <input type="number" id="month" placeholder="Month (MM)" min="1" max="12">
+    <br>
+    <button onclick="skipQuestion(3)">Skip</button>
+    <button onclick="nextStep(3)">Next</button>
+  </div>
+
+  <!-- Step 4: Birthday Year -->
+  <div id="step4" style="display:none;">
+    <p>Finally, which year were you born? ✨</p>
+    <input type="number" id="year" placeholder="Year (YYYY)" min="1900" max="2025">
+    <br>
+    <button onclick="skipQuestion(4)">Skip</button>
+    <button onclick="nextStep(4)">Next</button>
+  </div>
+
+  <!-- Step 5: Ask for personal question -->
+  <div id="step5" style="display:none;">
+    <p>May I ask a personal question? 🤔</p>
+    <button onclick="nextStep(5,'Yes')">Yes</button>
+    <button onclick="nextStep(5,'Skip')">Skip</button>
+  </div>
+
+  <!-- Step 6: Personal question -->
+  <div id="step6" style="display:none;">
+    <p>Would you like to come along with me while returning back to school after the winter vacation? 🚀</p>
+    <button onclick="nextStep(6,'Yes')">Yes</button>
+    <button onclick="nextStep(6,'No')">No</button>
+    <button onclick="nextStep(6,'Maybe')">Maybe</button>
+    <button onclick="nextStep(6,'Skip')">Skip</button>
+  </div>
+
+  <!-- Step 7: Leave a note -->
+  <div id="step7" style="display:none;">
+    <p>Leave me a note 💌</p>
+    <textarea id="note" placeholder="Your note..."></textarea>
+    <br>
+    <button onclick="showFinal()">Finish</button>
+  </div>
+
+</div>
+
+<div class="message" id="final-message"></div>
+<div class="countdown" id="countdown"></div>
+
+<button id="answerSkippedBtn" style="display:none; margin-top:20px;" onclick="answerSkipped()">Answer Skipped Questions</button>
+
+<div id="popup">
+  <p id="popup-text"></p>
+  <button onclick="closePopup()">Got it! 🙂</button>
+</div>
+
+<audio id="bg-music" loop>
+  <source src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+let birthday = { day:'Skipped', month:'Skipped', year:'Skipped', note:'', personalQ:'Skipped', skipped:[] };
+let skippedQueue = [];
+let countdownInterval;
+
+// Step 0: music
+function startMusic(play){
+  document.getElementById('step0').style.display='none';
+  document.getElementById('step-container').style.display='block';
+  if(play){
+    const music = document.getElementById('bg-music');
+    music.play();
+  }
+}
+
+// Steps navigation
+function nextStep(step, answer='') {
+  if(step === 1){
+    document.getElementById('step1').style.display='none';
+    document.getElementById('step2').style.display='block';
+  } else if(step === 2){
+    const d = parseInt(document.getElementById('day').value);
+    if(d){ birthday.day=d; } 
+    document.getElementById('step2').style.display='none';
+    document.getElementById('step3').style.display='block';
+  } else if(step === 3){
+    const m = parseInt(document.getElementById('month').value);
+    if(m){ birthday.month=m; } 
+    document.getElementById('step3').style.display='none';
+    document.getElementById('step4').style.display='block';
+  } else if(step === 4){
+    const y = parseInt(document.getElementById('year').value);
+    if(y){ birthday.year=y; } 
+    document.getElementById('step4').style.display='none';
+    document.getElementById('step5').style.display='block';
+  } else if(step === 5){
+    if(answer==='Yes'){
+      document.getElementById('step5').style.display='none';
+      document.getElementById('step6').style.display='block';
+    } else {
+      birthday.personalQ='Skipped';
+      birthday.skipped.push('Personal question');
+      document.getElementById('step5').style.display='none';
+      document.getElementById('step7').style.display='block';
+    }
+  } else if(step === 6){
+    birthday.personalQ = answer==='Skip' ? 'Skipped' : answer;
+    if(answer==='Skip') birthday.skipped.push('Winter vacation question');
+    document.getElementById('step6').style.display='none';
+    document.getElementById('step7').style.display='block';
+  }
+  updateSkippedBtn();
+}
+
+// Skip questions
+function skipQuestion(step){
+  if(step===2){ birthday.skipped.push('Day'); document.getElementById('step2').style.display='none'; document.getElementById('step3').style.display='block'; }
+  if(step===3){ birthday.skipped.push('Month'); document.getElementById('step3').style.display='none'; document.getElementById('step4').style.display='block'; }
+  if(step===4){ birthday.skipped.push('Year'); document.getElementById('step4').style.display='none'; document.getElementById('step5').style.display='block'; }
+  updateSkippedBtn();
+}
+
+// Show/Hide skipped questions button
+function updateSkippedBtn(){
+  const btn = document.getElementById('answerSkippedBtn');
+  if(birthday.skipped.length>0){ btn.style.display='inline-block'; }
+  else{ btn.style.display='none'; }
+}
+
+// Answer skipped questions
+function answerSkipped(){
+  skippedQueue = [...birthday.skipped];
+  birthday.skipped = [];
+  askNextSkipped();
+}
+
+function askNextSkipped(){
+  if(skippedQueue.length===0){
+    updateSkippedBtn();
+    return;
+  }
+  const q = skippedQueue.shift();
+  hideAllSteps();
+  if(q==='Day'){ document.getElementById('step2').style.display='block'; }
+  else if(q==='Month'){ document.getElementById('step3').style.display='block'; }
+  else if(q==='Year'){ document.getElementById('step4').style.display='block'; }
+  else if(q==='Personal question'){ document.getElementById('step5').style.display='block'; }
+  else if(q==='Winter vacation question'){ document.getElementById('step6').style.display='block'; }
+}
+
+// Hide all steps
+function hideAllSteps(){
+  for(let i=1;i<=7;i++){
+    document.getElementById('step'+i).style.display='none';
+  }
+}
+
+// Popup functions
+function showPopup(message) {
+  const popup = document.getElementById('popup');
+  const text = document.getElementById('popup-text');
+  text.innerHTML = message;
+  popup.style.display = 'block';
+  setTimeout(()=>{ popup.style.transform = 'translate(-50%, -50%) scale(1)'; }, 50);
+}
+function closePopup() {
+  const popup = document.getElementById('popup');
+  popup.style.transform = 'translate(-50%, -50%) scale(0)';
+  setTimeout(()=>{ popup.style.display='none'; }, 600);
+}
+
+// Confetti
+function confetti(){
+  for(let i=0;i<100;i++){
+    const conf = document.createElement('div');
+    conf.style.position='fixed';
+    conf.style.width='8px';
+    conf.style.height='8px';
+    conf.style.background=['#ff0','#f00','#0f0','#0ff','#f0f'][Math.floor(Math.random()*5)];
+    conf.style.left=Math.random()*100+'vw';
+    conf.style.top='-10px';
+    conf.style.opacity=Math.random()+0.3;
+    conf.style.transform='rotate('+Math.random()*360+'deg)';
+    document.body.appendChild(conf);
+    let fall = setInterval(()=>{
+      let top=parseFloat(conf.style.top);
+      if(top>window.innerHeight){ conf.remove(); clearInterval(fall); }
+      conf.style.top=(top+4+Math.random()*4)+'px';
+    }, 20);
+  }
+}
+
+// Final step
+function showFinal() {
+  birthday.note = document.getElementById('note').value || "No note left 🙂";
+  const today = new Date();
+  let age = (birthday.year==='Skipped') ? 'Unknown' : today.getFullYear() - birthday.year;
+
+  showPopup("I will meet you soon. Please send me the information via Gmail using the button below. Hoping for a thrilling fighter jet race!<br><br>—Rishav");
+
+  const finalDiv = document.getElementById('final-message');
+  let skippedStr = birthday.skipped.length>0 ? "Skipped questions: "+birthday.skipped.join(', ') : "All questions answered 🙂";
+
+  finalDiv.innerHTML = `Thanks Anushka! 🎉<br>
+    Birthday Day: ${birthday.day}<br>
+    Birthday Month: ${birthday.month}<br>
+    Birthday Year: ${birthday.year}<br>
+    Age: ${age} 🌸 <br>
+    Personal question: ${birthday.personalQ}<br>
+    Note: "${birthday.note}"<br>
+    ${skippedStr}<br><br>
+    <button id="sendEmailBtn">Send me this info via Gmail 💌</button>`;
+  finalDiv.style.display='block';
+
+  // Countdown
+  const countdownDiv = document.getElementById('countdown');
+  function updateCountdown() {
+    if(birthday.day==='Skipped'||birthday.month==='Skipped'){ countdownDiv.innerHTML='Countdown unavailable ⏳'; return; }
+    const nextBirthday = new Date(today.getFullYear(), birthday.month-1, birthday.day);
+    const target = nextBirthday>today ? nextBirthday : new Date(today.getFullYear()+1,birthday.month-1,birthday.day);
+    const diff = target - today;
+    const daysLeft = Math.floor(diff/(1000*60*60*24));
+    const hoursLeft = Math.floor((diff % (1000*60*60*24))/(1000*60*60));
+    const minutesLeft = Math.floor((diff % (1000*60*60))/(1000*60));
+    const secondsLeft = Math.floor((diff % (1000*60))/1000);
+    countdownDiv.innerHTML = `⏳ ${daysLeft}d ${hoursLeft}h ${minutesLeft}m ${secondsLeft}s until your birthday! 🎂`;
+  }
+  updateCountdown();
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(updateCountdown,1000);
+
+  // Gmail button
+  document.getElementById("sendEmailBtn").addEventListener("click", () => {
+    const subject = encodeURIComponent("Anushka's Birthday Info 🎉");
+    const body = encodeURIComponent(
+      `Hello! 👋\n\nAnushka has shared her info:\n
+      Birthday Day: ${birthday.day}\n
+      Birthday Month: ${birthday.month}\n
+      Birthday Year: ${birthday.year}\n
+      Age: ${age}\n
+      Personal question: ${birthday.personalQ}\n
+      Note: ${birthday.note}\n
+      Skipped questions: ${birthday.skipped.join(', ') || 'None'}`
+    );
+    const gmailLink = `https://mail.google.com/mail/u/0/?view=cm&fs=1&to=complicatedboy390@gmail.com&su=${subject}&body=${body}`;
+    window.open(gmailLink, "_blank");
+  });
+
+  // Floating smile emojis
+  for(let i=0;i<20;i++){
+    const smile = document.createElement('div');
+    smile.className='float-smile';
+    smile.textContent='🙂';
+    smile.style.left=Math.random()*90+'vw';
+    smile.style.fontSize=(16+Math.random()*24)+'px';
+    document.body.appendChild(smile);
+    setTimeout(()=>smile.remove(), 6000);
+  }
+
+  // Confetti
+  confetti();
+}
+</script>
+</body>
+</html>
